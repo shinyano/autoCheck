@@ -1,8 +1,3 @@
-8.0补邮.xlsx
-巴奈字章.xlsx,疯帽子.xlsx,环绯小情侣.xlsx,帅哥春绯.xlsx,知世.xlsx
+by.xlsx
+bnxn.xlsx,fmec.xlsx,hfyn.xlsx,hj.xlsx,kz.xlsx,ly.xlsx,srxh.xlsx,sy.xlsx,tdpd.xlsx,zmcsp.xlsx,zsy.xlsx
 
-
-数据格式说明：
-第一行：补邮表格文件名（仅支持xlsx后缀名文件）
-第二行：商品表格文件名（仅支持xlsx后缀名文件），中间用英文逗号隔开
-可以在符合数据格式的情况下，直接修改该文件

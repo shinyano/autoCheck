@@ -130,6 +130,7 @@ def buildMail(table, goodList):
             break
         names.append(row[1])
 
+    # 遍历商品
     for col in table.iter_cols(min_col=15,values_only=True):
         index = -1
         for i in range(len(goodList)):
@@ -138,8 +139,8 @@ def buildMail(table, goodList):
         if index == -1:
             continue
         for i in range(len(names)):
-            if col[i+3] == None:
-                continue
+            # if col[i+3] == None:
+            #     continue
             # print(names[i], col[i+3])
             # 给重名的添加哈希尾缀，哈希值为名字第一位的ASCII码 * 7 % 10，若还有重名则再加名字第一位的ASCII码 * 7
             good = goodList[index]
@@ -161,7 +162,8 @@ def buildMail(table, goodList):
                     names[i] = name
                     break
                 flag = 1
-            goodList[index].addMailRecord(names[i], col[i+3], mailId, des)
+            # 如果用户没有补邮，将其补邮数量记为0，主要是为了在没有补邮该商品却补邮了其他商品的情况下也能显示单号
+            goodList[index].addMailRecord(names[i], 0 if col[i+3] == None else col[i+3], mailId, des)
 
     # for good in goodList:
     #     good.print()
@@ -221,7 +223,7 @@ def generateRes(goodList):
                 table.cell(row = i+2, column = 5).value = "无数据"
                 table.cell(row = i+2, column = 5).alignment = rightAlign
                 table.cell(row = i+2, column = 7).value = None
-            if table.cell(row = i+2, column = 4).value != table.cell(row = i+2, column = 5).value:
+            if table.cell(row = i+2, column = 4).value != (table.cell(row = i+2, column = 5).value if table.cell(row = i+2, column = 5).value != 0 else "无数据"):
                 table.cell(row = i+2, column = 6).value = "←小糊涂蛋"
                 pointer += 1
                 if pointer == lastPointer + 1:
@@ -323,6 +325,7 @@ if __name__ == "__main__":
         goodstr = input('请输入商品表格名称（以xlsx为后缀名，并用【英文】逗号隔开，例如：商品1.xlsx,商品2.xlsx）：\n')
         
     goodsFilenames = [x.strip() for x in goodstr.split(',')]
+    print("友情提示：若需要多次使用同样文件名，建议找个地方保存一下以便快速输入。")
     print("正在工作，请稍候……")
     goodList = []
 
@@ -330,7 +333,8 @@ if __name__ == "__main__":
 
         mailTable = xl.load_workbook(mailFilename)["表2"]
         for goodFilename in goodsFilenames:
-            goodTable = xl.load_workbook(goodFilename)["表2"]
+            wb = xl.load_workbook(goodFilename)
+            goodTable = wb["表2"]
             goodList.extend(buildSale(goodTable))
         goodList = buildMail(mailTable, goodList)
 
@@ -341,8 +345,8 @@ if __name__ == "__main__":
 
         print("\n结果表格\"result.xlsx\"已生成，请查看程序所在文件夹\n")
 
-        if mode != 1:
-            saveConfig(mailFilename, goodstr)
+        # if mode != 1:
+        #     saveConfig(mailFilename, goodstr)
 
     except  FileNotFoundError as e:
         print(e)
