@@ -2,6 +2,7 @@ import openpyxl as xl
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils.exceptions import InvalidFileException
 import os
+import traceback
 
 leftAlign = Alignment(horizontal='left')
 rightAlign = Alignment(horizontal='right')
@@ -182,6 +183,7 @@ def generateRes(goodList):
     errorTable.column_dimensions['D'].width = 17
     errorTable.cell(row = 1, column = 5).value = "原数量"
     errorTable.cell(row = 1, column = 6).value = "补邮数量"
+    errorTable.cell(row = 1, column = 7).value = "补邮备注（空白就是没备注）"
 
     pointer = 1
     lastPointer = 1
@@ -200,23 +202,28 @@ def generateRes(goodList):
         table.cell(row = 1, column = 4).value = "原数量"
         table.cell(row = 1, column = 5).value = "补邮数量"
         table.cell(row = 1, column = 6).value = "小糊涂蛋check"
-        table.cell(row = 1, column = 7).value = "补邮备注"
-        for i in range(len(names)):
-            table.cell(row = i+2, column = 3).value = names[i]
-            if names[i] in saleDict:
-                table.cell(row = i+2, column = 1).value = saleDict[names[i]]["id"]
-                table.cell(row = i+2, column = 4).value = saleDict[names[i]]["sale"]
+        table.cell(row = 1, column = 7).value = "补邮备注（空白就是没备注）"
+        i = 0
+        # mailDict 中包含了没有补该商品也没有买该商品的其他人，需要将他们跳过（条件：名字不在saledict中且对应的补邮数量为0）
+        # i：标记当前所在的表格的行，从0开始；k：遍历所有出现在补邮和销售表中的名字
+        for k in range(len(names)):
+            if (not names[k] in saleDict) and (names[k] in mailDict) and (mailDict[names[k]]["sale"] == 0):
+                continue
+            table.cell(row = i+2, column = 3).value = names[k]
+            if names[k] in saleDict:
+                table.cell(row = i+2, column = 1).value = saleDict[names[k]]["id"]
+                table.cell(row = i+2, column = 4).value = saleDict[names[k]]["sale"]
             else:
                 table.cell(row = i+2, column = 1).value = "-"
                 table.cell(row = i+2, column = 1).alignment = rightAlign
                 table.cell(row = i+2, column = 4).value = "无数据"
                 table.cell(row = i+2, column = 4).alignment = rightAlign
-            if names[i] in mailDict:
-                table.cell(row = i+2, column = 2).value = mailDict[names[i]]["id"]
-                table.cell(row = i+2, column = 5).value = mailDict[names[i]]["sale"]
-                table.cell(row = i+2, column = 7).value = str(mailDict[names[i]]["des"]) if mailDict[names[i]]["des"] != None else None
-                if desLen < len(str(mailDict[names[i]]["des"])):
-                    desLen = len(str(mailDict[names[i]]["des"]))
+            if names[k] in mailDict:
+                table.cell(row = i+2, column = 2).value = mailDict[names[k]]["id"]
+                table.cell(row = i+2, column = 5).value = mailDict[names[k]]["sale"]
+                table.cell(row = i+2, column = 7).value = str(mailDict[names[k]]["des"]) if mailDict[names[k]]["des"] != None else None
+                if desLen < len(str(mailDict[names[k]]["des"])):
+                    desLen = len(str(mailDict[names[k]]["des"]))
             else:
                 table.cell(row = i+2, column = 2).value = "-"
                 table.cell(row = i+2, column = 2).alignment = rightAlign
@@ -237,11 +244,14 @@ def generateRes(goodList):
                 errorTable.cell(row = pointer, column = 5).alignment = rightAlign
                 errorTable.cell(row = pointer, column = 6).value = table.cell(row = i+2, column = 5).value
                 errorTable.cell(row = pointer, column = 6).alignment = rightAlign
+                errorTable.cell(row = pointer, column = 7).value = table.cell(row = i+2, column = 7).value
 
             else:
                 table.cell(row = i+2, column = 6).value = None
+            i += 1
 
         table.column_dimensions['G'].width = desLen + 5 if desLen > 14.75 else 14.75
+        errorTable.column_dimensions['G'].width = table.column_dimensions['G'].width
         table.column_dimensions['F'].width = 15
         table.column_dimensions['C'].width = 17
 
@@ -306,6 +316,7 @@ if __name__ == "__main__":
     print("导出补邮及商品数调表格时，请保证【补邮数调和原数调内同一商品的名字相同】，否则将无法识别！！！\n")
     print("工作完成后，将会输出 result.xlsx 结果表格，若需要重新生成，只需要重新运行程序即可（result.xlsx需要保持关闭状态）\n")
     print("若result.xlsx中出现重名提示，请谨慎判断是重名还是补邮数调备注填写错误\n")
+    print("为节省文件读取时间，推荐将用到的表格中的表一全部删掉（建议另存为）\n")
     print("---------------------------------------------------------------------------------------------来自贴心的芝麻丸披萨\n\n\n")
 
     while isOpen("result.xlsx"):
@@ -326,21 +337,24 @@ if __name__ == "__main__":
         
     goodsFilenames = [x.strip() for x in goodstr.split(',')]
     print("友情提示：若需要多次使用同样文件名，建议找个地方保存一下以便快速输入。")
-    print("正在工作，请稍候……")
+    print("正在工作，请稍候......")
     goodList = []
 
     try:
-
-        mailTable = xl.load_workbook(mailFilename)["表2"]
+        print("starting......")
         for goodFilename in goodsFilenames:
+            print("building sales for " + goodFilename + "......")
             wb = xl.load_workbook(goodFilename)
             goodTable = wb["表2"]
             goodList.extend(buildSale(goodTable))
+            
+        print("building mail sales......")
+        mailTable = xl.load_workbook(mailFilename)["表2"]
         goodList = buildMail(mailTable, goodList)
 
         # for item in goodList:
         #     item.toString()
-
+        print("building results......")
         generateRes(goodList)
 
         print("\n结果表格\"result.xlsx\"已生成，请查看程序所在文件夹\n")
@@ -361,7 +375,7 @@ if __name__ == "__main__":
 
 
     except Exception as e:
-        print(e)
+        traceback.print_exc(e)
         print("未知错误，请联系")
         
 
